@@ -1,5 +1,10 @@
+
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import {
+  TouchableOpacity,
+  Text,
+  StyleSheet,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { gradientProps, fonts } from '../theme';
 
@@ -10,11 +15,27 @@ export default function GradientButton({
   textStyle,
   right,
   children,
+  disabled = false,
 }) {
   return (
-    <TouchableOpacity activeOpacity={0.85} onPress={onPress} style={style}>
-      <LinearGradient {...gradientProps} style={styles.btn}>
-        {children ?? <Text style={[styles.text, textStyle]}>{label}</Text>}
+    <TouchableOpacity
+      activeOpacity={0.85}
+      onPress={onPress}
+      style={style}
+      disabled={disabled}
+    >
+      <LinearGradient
+        {...gradientProps}
+        style={[
+          styles.btn,
+          disabled && styles.disabled,
+        ]}
+      >
+        {children ?? (
+          <Text style={[styles.text, textStyle]}>
+            {label}
+          </Text>
+        )}
         {right}
       </LinearGradient>
     </TouchableOpacity>
@@ -30,5 +51,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  text: { fontFamily: fonts.regular, fontSize: 18, color: '#000' },
+  disabled: {
+    opacity: 0.45,
+  },
+  text: {
+    fontFamily: fonts.regular,
+    fontSize: 18,
+    color: '#000',
+  },
 });
