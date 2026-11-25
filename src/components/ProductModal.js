@@ -532,55 +532,74 @@ export default function ProductModal({
           </Text>
 
           {/* PRODUCTOS RELACIONADOS - HU31 */}
-          {relatedProducts.length > 0 && (
-            <View style={styles.relatedBox}>
-              <Text style={styles.optTitle}>
-                También te puede interesar
-              </Text>
+          <View style={styles.relatedBox}>
+            <Text style={styles.optTitle}>
+              También te puede interesar
+            </Text>
 
-              <Text style={styles.relatedDescription}>
-                Descubre otros productos de esta categoría.
-              </Text>
+            {relatedProducts.length > 0 ? (
+              <>
+                <Text style={styles.relatedDescription}>
+                  Descubre otros productos de esta categoría.
+                </Text>
 
-              {relatedProducts.map((item) => (
-                <TouchableOpacity
-                  key={item.id}
-                  style={styles.relatedItem}
-                  activeOpacity={0.8}
-                  onPress={() => onSelectProduct?.(item.id)}
-                >
-                  <ProductImage
-                    product={item}
-                    style={styles.relatedImage}
-                    iconSize={35}
-                  />
+                {relatedProducts.map((item) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={styles.relatedItem}
+                    activeOpacity={0.8}
+                    onPress={() => onSelectProduct?.(item.id)}
+                  >
+                    <ProductImage
+                      product={item}
+                      style={styles.relatedImage}
+                      iconSize={35}
+                    />
 
-                  <View style={styles.relatedInfo}>
-                    <Text
-                      style={styles.relatedName}
-                      numberOfLines={2}
-                    >
-                      {item.name}
-                    </Text>
+                    <View style={styles.relatedInfo}>
+                      <Text
+                        style={styles.relatedName}
+                        numberOfLines={2}
+                      >
+                        {item.name}
+                      </Text>
 
-                    <Text style={styles.relatedCategory}>
-                      {item.category}
-                    </Text>
+                      <Text style={styles.relatedCategory}>
+                        {item.category}
+                      </Text>
 
-                    <Text style={styles.relatedPrice}>
-                      {formatPrice(item.price)}
-                    </Text>
-                  </View>
+                      <Text style={styles.relatedPrice}>
+                        {formatPrice(item.price)}
+                      </Text>
+                    </View>
 
-                  <Ionicons
-                    name="chevron-forward"
-                    size={22}
-                    color={colors.orange}
-                  />
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
+                    <Ionicons
+                      name="chevron-forward"
+                      size={22}
+                      color={colors.orange}
+                    />
+                  </TouchableOpacity>
+                ))}
+              </>
+            ) : (
+              <View style={styles.noRelated}>
+                <Ionicons
+                  name="search-outline"
+                  size={32}
+                  color="#888"
+                />
+
+                <Text style={styles.noRelatedTitle}>
+                  No hay productos relacionados
+                </Text>
+
+                <Text style={styles.noRelatedDescription}>
+                  No hay otros productos disponibles en esta
+                  categoría por el momento.
+                </Text>
+              </View>
+            )}
+          </View>
 
           {/* VALORACIONES - HU19 */}
           <View style={styles.reviewBox}>
@@ -1038,6 +1057,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.orange,
     marginTop: 5,
+  },
+  noRelated: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 22,
+    paddingHorizontal: 12,
+  },
+  noRelatedTitle: {
+    fontFamily: fonts.bold,
+    fontSize: 14,
+    color: '#444',
+    marginTop: 10,
+    textAlign: 'center',
+  },
+  noRelatedDescription: {
+    fontFamily: fonts.regular,
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 5,
+    lineHeight: 18,
   },
 
   // ESTILOS DE PREGUNTAS HU24

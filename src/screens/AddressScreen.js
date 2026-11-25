@@ -70,7 +70,11 @@ export default function AddressScreen({ navigate }) {
         setErrors(result.errors);
       }
 
-      notify(result.message || 'No se pudo guardar la dirección.', 'warn');
+      notify(
+        result.message || 'No se pudo guardar la dirección.',
+        'warn'
+      );
+
       return;
     }
 
@@ -93,6 +97,32 @@ export default function AddressScreen({ navigate }) {
 
   // HU25: eliminar una dirección con confirmación.
   const handleDelete = (address) => {
+    const confirmDelete = () => {
+      const deleted = deleteAddress(address.id);
+
+      if (deleted) {
+        // Si se estaba editando la dirección eliminada,
+        // limpiar el formulario.
+        if (String(editingId) === String(address.id)) {
+          clearForm();
+        }
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      // Confirmación compatible con navegador web.
+      const confirmed = globalThis.confirm(
+        `¿Deseas eliminar la dirección "${address.alias}"?`
+      );
+
+      if (confirmed) {
+        confirmDelete();
+      }
+
+      return;
+    }
+
+    // Confirmación para Android y iOS.
     Alert.alert(
       'Eliminar dirección',
       `¿Deseas eliminar la dirección "${address.alias}"?`,
@@ -104,15 +134,10 @@ export default function AddressScreen({ navigate }) {
         {
           text: 'Eliminar',
           style: 'destructive',
-          onPress: () => {
-            const deleted = deleteAddress(address.id);
-
-            if (deleted && editingId === address.id) {
-              clearForm();
-            }
-          },
+          onPress: confirmDelete,
         },
-      ]
+      ],
+      { cancelable: true }
     );
   };
 
@@ -297,8 +322,11 @@ export default function AddressScreen({ navigate }) {
             </View>
           ) : (
             addresses.map((address) => {
-              const isDefault = defaultAddress?.id === address.id;
-              const isSelected = selectedAddress?.id === address.id;
+              const isDefault =
+                String(defaultAddress?.id) === String(address.id);
+
+              const isSelected =
+                String(selectedAddress?.id) === String(address.id);
 
               return (
                 <View
@@ -399,7 +427,10 @@ export default function AddressScreen({ navigate }) {
                         color={colors.danger}
                       />
 
-                      <Text style={[styles.actionText, { color: colors.danger }]}>
+                      <Text style={[
+                        styles.actionText,
+                        { color: colors.danger },
+                      ]}>
                         Eliminar
                       </Text>
                     </TouchableOpacity>

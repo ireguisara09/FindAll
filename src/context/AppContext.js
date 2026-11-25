@@ -42,7 +42,7 @@ const BUYER_ONLY = [
   'history',
   'addresses',
   'notifications',
-  'help', // HU32: centro de ayuda
+  'help',
 ];
 
 const SELLER_ONLY = ['seller', 'seller-new'];
@@ -57,7 +57,7 @@ const SHIPPING_RATES = {
 
 // HU26: tiempos estimados ficticios en días.
 const SHIPPING_DAYS = {
-  standard: 3,
+  standard: 2,
   express: 1,
 };
 
@@ -79,6 +79,7 @@ const getShippingQuote = (municipio, method = 'standard') => {
       available: false,
       cost: 0,
       days: 0,
+      daysLabel: 'No disponible',
       method,
       message: 'Todavía no tenemos cobertura en este municipio.',
     };
@@ -92,6 +93,7 @@ const getShippingQuote = (municipio, method = 'standard') => {
     available: true,
     cost: rates[method],
     days: SHIPPING_DAYS[method],
+    daysLabel: method === 'standard' ? '1 a 2 días' : '1 día',
     method,
     message: 'Servicio de envío disponible.',
   };
@@ -510,7 +512,6 @@ export function AppProvider({ children }) {
   // HU32: CENTRO DE AYUDA Y SOLICITUDES
   // ======================================================
 
-  // El comprador crea una solicitud asociada a uno de sus pedidos.
   const createSupportRequest = (
     orderCode,
     reason,
@@ -528,7 +529,6 @@ export function AppProvider({ children }) {
 
     const validReasons = ['Entrega', 'Producto', 'Otro'];
 
-    // CA03: validar que se haya seleccionado un pedido.
     if (!cleanOrderCode) {
       return {
         ok: false,
@@ -536,7 +536,6 @@ export function AppProvider({ children }) {
       };
     }
 
-    // Comprobar que el pedido pertenezca al comprador actual.
     const order = orders.find(
       (item) => String(item.code) === cleanOrderCode
     );
@@ -548,7 +547,6 @@ export function AppProvider({ children }) {
       };
     }
 
-    // CA01: validar el motivo de la solicitud.
     if (!validReasons.includes(reason)) {
       return {
         ok: false,
@@ -556,7 +554,6 @@ export function AppProvider({ children }) {
       };
     }
 
-    // CA02 y CA03: mínimo 15 caracteres.
     if (cleanDescription.length < 15) {
       return {
         ok: false,
@@ -564,7 +561,6 @@ export function AppProvider({ children }) {
       };
     }
 
-    // Generar un número de caso único.
     const existingCases = supportRequests.map(
       (request) => request.caseNumber
     );
@@ -611,7 +607,6 @@ export function AppProvider({ children }) {
     };
   };
 
-  // CA04: simular una respuesta para una solicitud abierta.
   const simulateSupportResponse = (requestId) => {
     if (!requireBuyer('consultar tus solicitudes de ayuda')) {
       return false;
@@ -660,7 +655,6 @@ export function AppProvider({ children }) {
   // HU30: AVISOS DE REPOSICIÓN
   // ======================================================
 
-  // El comprador se suscribe a un producto o variante agotada.
   const subscribeToRestock = (productId, variantId = null) => {
     if (!requireBuyer('solicitar avisos de reposición')) {
       return false;
@@ -735,7 +729,6 @@ export function AppProvider({ children }) {
     return true;
   };
 
-  // El comprador cancela un aviso registrado.
   const cancelRestockSubscription = (subscriptionId) => {
     if (!requireBuyer('administrar avisos de reposición')) {
       return false;
@@ -763,8 +756,6 @@ export function AppProvider({ children }) {
     return true;
   };
 
-  // El vendedor simula la reposición de un producto o variante.
-  // Se notificará a todos los compradores que estén suscritos.
   const simulateRestock = (
     productId,
     variantId = null,
@@ -853,7 +844,6 @@ export function AppProvider({ children }) {
 
     setProducts(nextProducts);
 
-    // Notificar a todos los compradores suscritos.
     setUsers((previous) => {
       const nextUsers = { ...previous };
 
@@ -1120,10 +1110,14 @@ export function AppProvider({ children }) {
   };
 
   const deleteAddress = (addressId) => {
-    if (!requireBuyer('administrar direcciones')) return false;
+    if (!requireBuyer('administrar direcciones')) {
+      return false;
+    }
+
+    const targetId = String(addressId);
 
     const exists = addresses.some(
-      (address) => address.id === addressId
+      (address) => String(address.id) === targetId
     );
 
     if (!exists) {
@@ -1132,18 +1126,20 @@ export function AppProvider({ children }) {
     }
 
     updateData((current) => {
-      const nextAddresses = (current.addresses || []).filter(
-        (address) => address.id !== addressId
+      const currentAddresses = current.addresses || [];
+
+      const nextAddresses = currentAddresses.filter(
+        (address) => String(address.id) !== targetId
       );
 
       const nextDefaultId =
-        current.defaultAddressId === addressId
+        String(current.defaultAddressId) === targetId
           ? nextAddresses[0]?.id ?? null
           : current.defaultAddressId;
 
       const nextSelectedId =
-        current.selectedAddressId === addressId
-          ? nextDefaultId || nextAddresses[0]?.id || null
+        String(current.selectedAddressId) === targetId
+          ? nextDefaultId ?? nextAddresses[0]?.id ?? null
           : current.selectedAddressId;
 
       return {
@@ -1154,7 +1150,8 @@ export function AppProvider({ children }) {
       };
     });
 
-    notify('Dirección eliminada.', 'info');
+    notify('Dirección eliminada correctamente.', 'success');
+
     return true;
   };
 
@@ -1441,6 +1438,7 @@ export function AppProvider({ children }) {
       shippingMethodLabel:
         shippingMethod === 'express' ? 'Exprés' : 'Estándar',
       shippingDays: shippingQuote.days,
+      shippingDaysLabel: shippingQuote.daysLabel,
       items: lines.map((line) => ({
         productId: line.productId,
         name: line.product.name,

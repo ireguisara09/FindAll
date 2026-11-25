@@ -1,4 +1,3 @@
-
 import React, { useMemo, useState } from 'react';
 import {
   View,
@@ -39,6 +38,9 @@ const HelpScreen = () => {
   const [description, setDescription] = useState('');
   const [showOrders, setShowOrders] = useState(false);
   const [showForm, setShowForm] = useState(false);
+
+  // HU: errores de validación del formulario.
+  const [errors, setErrors] = useState({});
 
   const descriptionLength = description.trim().length;
 
@@ -91,10 +93,36 @@ const HelpScreen = () => {
     );
   };
 
+  // HU: validar los campos antes de crear la solicitud.
   const handleCreateRequest = () => {
-    if (!selectedOrder || descriptionLength < 15) return;
+    const newErrors = {};
 
-    if (hasOpenRequest(selectedOrder.code)) return;
+    // Validar selección del pedido.
+    if (!selectedOrder) {
+      newErrors.order = 'Debes seleccionar un pedido.';
+    }
+
+    // Validar longitud mínima de la descripción.
+    if (descriptionLength < 15) {
+      newErrors.description =
+        'La descripción debe tener mínimo 15 caracteres.';
+    }
+
+    // Validar que no exista otra solicitud abierta para ese pedido.
+    if (
+      selectedOrder &&
+      hasOpenRequest(selectedOrder.code)
+    ) {
+      newErrors.order =
+        'Ya tienes una solicitud abierta para este pedido.';
+    }
+
+    setErrors(newErrors);
+
+    // Si existen errores, no se crea el caso.
+    if (Object.keys(newErrors).length > 0) {
+      return;
+    }
 
     const result = createSupportRequest(
       selectedOrder.code,
@@ -106,6 +134,7 @@ const HelpScreen = () => {
       setSelectedOrder(null);
       setSelectedReason('Entrega');
       setDescription('');
+      setErrors({});
       setShowForm(false);
     }
   };
@@ -130,6 +159,7 @@ const HelpScreen = () => {
               <Text style={styles.modalTitle}>
                 Seleccionar pedido
               </Text>
+
               <Text style={styles.modalSubtitle}>
                 Elige el pedido sobre el que necesitas ayuda.
               </Text>
@@ -139,7 +169,11 @@ const HelpScreen = () => {
               style={styles.closeButton}
               onPress={() => setShowOrders(false)}
             >
-              <Ionicons name="close" size={21} color={C.black} />
+              <Ionicons
+                name="close"
+                size={21}
+                color={C.black}
+              />
             </TouchableOpacity>
           </View>
 
@@ -179,6 +213,12 @@ const HelpScreen = () => {
                     disabled={alreadyOpen}
                     onPress={() => {
                       setSelectedOrder(order);
+
+                      setErrors((prev) => ({
+                        ...prev,
+                        order: undefined,
+                      }));
+
                       setShowOrders(false);
                     }}
                   >
@@ -243,7 +283,10 @@ const HelpScreen = () => {
                 size={14}
                 color={C.orange}
               />
-              <Text style={styles.caseLabel}>Número de caso</Text>
+
+              <Text style={styles.caseLabel}>
+                Número de caso
+              </Text>
             </View>
 
             <Text style={styles.caseNumber}>
@@ -291,6 +334,7 @@ const HelpScreen = () => {
         <View style={styles.requestDetails}>
           <View style={styles.detailItem}>
             <Text style={styles.detailLabel}>Pedido</Text>
+
             <Text style={styles.detailValue}>
               #{request.orderCode}
             </Text>
@@ -298,6 +342,7 @@ const HelpScreen = () => {
 
           <View style={styles.detailItem}>
             <Text style={styles.detailLabel}>Motivo</Text>
+
             <Text style={styles.detailValue}>
               {request.reason}
             </Text>
@@ -305,6 +350,7 @@ const HelpScreen = () => {
 
           <View style={styles.detailItem}>
             <Text style={styles.detailLabel}>Fecha</Text>
+
             <Text style={styles.detailValue}>
               {getDate(request.createdAt)}
             </Text>
@@ -312,7 +358,9 @@ const HelpScreen = () => {
         </View>
 
         <View style={styles.descriptionContainer}>
-          <Text style={styles.detailLabel}>Descripción del problema</Text>
+          <Text style={styles.detailLabel}>
+            Descripción del problema
+          </Text>
 
           <Text style={styles.requestDescription}>
             {request.description}
@@ -442,7 +490,10 @@ const HelpScreen = () => {
 
             <TouchableOpacity
               style={styles.welcomeButton}
-              onPress={() => setShowForm(true)}
+              onPress={() => {
+                setShowForm(true);
+                setErrors({});
+              }}
               activeOpacity={0.8}
             >
               <Text style={styles.welcomeButtonText}>
@@ -563,7 +614,10 @@ const HelpScreen = () => {
 
             <TouchableOpacity
               style={styles.emptyButton}
-              onPress={() => setShowForm(true)}
+              onPress={() => {
+                setShowForm(true);
+                setErrors({});
+              }}
             >
               <Text style={styles.emptyButtonText}>
                 Crear mi primera solicitud
@@ -591,7 +645,10 @@ const HelpScreen = () => {
           {!showForm ? (
             <TouchableOpacity
               style={styles.createRequestButton}
-              onPress={() => setShowForm(true)}
+              onPress={() => {
+                setShowForm(true);
+                setErrors({});
+              }}
               activeOpacity={0.75}
             >
               <View style={styles.createRequestIcon}>
@@ -632,7 +689,10 @@ const HelpScreen = () => {
                 </View>
 
                 <TouchableOpacity
-                  onPress={() => setShowForm(false)}
+                  onPress={() => {
+                    setShowForm(false);
+                    setErrors({});
+                  }}
                   style={styles.closeFormButton}
                 >
                   <Ionicons
@@ -649,7 +709,10 @@ const HelpScreen = () => {
               </Text>
 
               <TouchableOpacity
-                style={styles.selector}
+                style={[
+                  styles.selector,
+                  errors.order && styles.inputError,
+                ]}
                 onPress={() => setShowOrders(true)}
                 activeOpacity={0.75}
               >
@@ -678,6 +741,12 @@ const HelpScreen = () => {
                   color={C.muted}
                 />
               </TouchableOpacity>
+
+              {errors.order && (
+                <Text style={styles.errorText}>
+                  {errors.order}
+                </Text>
+              )}
 
               {selectedOrder && (
                 <Text style={styles.selectedOrderDate}>
@@ -737,15 +806,33 @@ const HelpScreen = () => {
               </Text>
 
               <TextInput
-                style={styles.descriptionInput}
+                style={[
+                  styles.descriptionInput,
+                  errors.description && styles.inputError,
+                ]}
                 placeholder="Explica detalladamente el inconveniente que presentas..."
                 placeholderTextColor={C.muted}
                 value={description}
-                onChangeText={setDescription}
+                onChangeText={(value) => {
+                  setDescription(value);
+
+                  if (value.trim().length >= 15) {
+                    setErrors((prev) => ({
+                      ...prev,
+                      description: undefined,
+                    }));
+                  }
+                }}
                 multiline
                 textAlignVertical="top"
                 maxLength={500}
               />
+
+              {errors.description && (
+                <Text style={styles.errorText}>
+                  {errors.description}
+                </Text>
+              )}
 
               <View style={styles.characterCounter}>
                 <Text
@@ -781,11 +868,7 @@ const HelpScreen = () => {
               <GradientButton
                 label="Enviar solicitud"
                 onPress={handleCreateRequest}
-                disabled={
-                  !selectedOrder ||
-                  descriptionLength < 15 ||
-                  hasOpenRequest(selectedOrder?.code)
-                }
+                disabled={false}
               />
             </View>
           )}
@@ -1423,6 +1506,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: C.black,
     backgroundColor: C.white,
+  },
+
+  // HU: estilos de validación.
+  inputError: {
+    borderColor: '#D32F2F',
+  },
+
+  errorText: {
+    fontFamily: FONT_MEDIUM,
+    fontSize: 10,
+    color: '#D32F2F',
+    marginTop: 6,
+    marginLeft: 3,
   },
 
   characterCounter: {

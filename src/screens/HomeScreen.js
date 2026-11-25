@@ -29,6 +29,9 @@ import {
 
 import { useApp } from '../context/AppContext';
 
+// HU23: validación del rango de precios.
+import { validatePriceRange } from '../utils/filters';
+
 const HERO_IMG = require('../../assets/hero.png');
 
 const getProductStock = (product) => {
@@ -69,8 +72,18 @@ export default function HomeScreen({ navigate, onlyFavorites = false }) {
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState('none');
   const [selectedId, setSelectedId] = useState(null);
+
+  // Precios que escribe el comprador.
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
+
+  // HU23: precios que realmente se utilizan para filtrar.
+  const [appliedMinPrice, setAppliedMinPrice] = useState('');
+  const [appliedMaxPrice, setAppliedMaxPrice] = useState('');
+
+  // HU23: mensaje de validación.
+  const [priceError, setPriceError] = useState('');
+
   const [availableOnly, setAvailableOnly] = useState(false);
   const [filtersExpanded, setFiltersExpanded] = useState(false);
 
@@ -104,11 +117,21 @@ export default function HomeScreen({ navigate, onlyFavorites = false }) {
   // Búsqueda y filtros combinados.
   const data = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const min = minPrice.trim() === '' ? null : Number(minPrice);
-    const max = maxPrice.trim() === '' ? null : Number(maxPrice);
+
+    const min =
+      appliedMinPrice.trim() === ''
+        ? null
+        : Number(appliedMinPrice);
+
+    const max =
+      appliedMaxPrice.trim() === ''
+        ? null
+        : Number(appliedMaxPrice);
 
     let list = products.filter((product) => {
-      const matchesName = (product.name || '').toLowerCase().includes(q);
+      const matchesName = (product.name || '')
+        .toLowerCase()
+        .includes(q);
 
       const matchesCategory =
         category === 'Todas' || product.category === category;
@@ -119,10 +142,10 @@ export default function HomeScreen({ navigate, onlyFavorites = false }) {
       const price = Number(product.price) || 0;
 
       const matchesMin =
-        min === null || (Number.isFinite(min) && price >= min);
+        min === null || price >= min;
 
       const matchesMax =
-        max === null || (Number.isFinite(max) && price <= max);
+        max === null || price <= max;
 
       const matchesAvailability =
         !availableOnly || getProductStock(product) > 0;
@@ -156,28 +179,59 @@ export default function HomeScreen({ navigate, onlyFavorites = false }) {
     brand,
     query,
     sort,
-    minPrice,
-    maxPrice,
+    appliedMinPrice,
+    appliedMaxPrice,
     availableOnly,
     onlyFavorites,
     favorites,
   ]);
 
+  // HU23: aplicar filtros únicamente si el rango es válido.
+  const applyPriceFilters = () => {
+    const validation = validatePriceRange(minPrice, maxPrice);
+
+    if (!validation.valid) {
+      setPriceError(validation.message);
+      return;
+    }
+
+    setPriceError('');
+
+    setAppliedMinPrice(minPrice);
+    setAppliedMaxPrice(maxPrice);
+  };
+
+  // Restablecer todos los filtros.
   const clearFilters = () => {
     setCategory('Todas');
     setBrand('Todas');
     setQuery('');
     setSort('none');
+
     setMinPrice('');
     setMaxPrice('');
+
+    setAppliedMinPrice('');
+    setAppliedMaxPrice('');
+
+    setPriceError('');
+
     setAvailableOnly(false);
   };
 
+  // Limpiar únicamente los filtros avanzados.
   const clearAdvancedFilters = () => {
     setBrand('Todas');
     setSort('none');
+
     setMinPrice('');
     setMaxPrice('');
+
+    setAppliedMinPrice('');
+    setAppliedMaxPrice('');
+
+    setPriceError('');
+
     setAvailableOnly(false);
   };
 
@@ -188,13 +242,14 @@ export default function HomeScreen({ navigate, onlyFavorites = false }) {
     sort !== 'none' ||
     minPrice.trim() !== '' ||
     maxPrice.trim() !== '' ||
+    appliedMinPrice.trim() !== '' ||
+    appliedMaxPrice.trim() !== '' ||
     availableOnly;
 
   const activeFiltersCount = [
     brand !== 'Todas',
     sort !== 'none',
-    minPrice.trim() !== '',
-    maxPrice.trim() !== '',
+    minPrice.trim() !== '' || maxPrice.trim() !== '',
     availableOnly,
   ].filter(Boolean).length;
 
@@ -353,11 +408,13 @@ export default function HomeScreen({ navigate, onlyFavorites = false }) {
           <View style={styles.priceRow}>
             <View style={styles.priceInputContainer}>
               <Text style={styles.inputPrefix}>Mínimo $</Text>
+
               <TextInput
                 value={minPrice}
-                onChangeText={(value) =>
-                  setMinPrice(value.replace(/[^0-9]/g, ''))
-                }
+                onChangeText={(value) => {
+                  setMinPrice(value.replace(/[^0-9]/g, ''));
+                  setPriceError('');
+                }}
                 placeholder="0"
                 placeholderTextColor="#888"
                 keyboardType="numeric"
@@ -367,11 +424,13 @@ export default function HomeScreen({ navigate, onlyFavorites = false }) {
 
             <View style={styles.priceInputContainer}>
               <Text style={styles.inputPrefix}>Máximo $</Text>
+
               <TextInput
                 value={maxPrice}
-                onChangeText={(value) =>
-                  setMaxPrice(value.replace(/[^0-9]/g, ''))
-                }
+                onChangeText={(value) => {
+                  setMaxPrice(value.replace(/[^0-9]/g, ''));
+                  setPriceError('');
+                }}
                 placeholder="Sin límite"
                 placeholderTextColor="#888"
                 keyboardType="numeric"
@@ -379,6 +438,29 @@ export default function HomeScreen({ navigate, onlyFavorites = false }) {
               />
             </View>
           </View>
+
+          {/* HU23: mensaje de error del rango de precios */}
+          {priceError !== '' && (
+            <View style={styles.priceErrorContainer}>
+              <Ionicons
+                name="alert-circle-outline"
+                size={17}
+                color="#D32F2F"
+              />
+
+              <Text style={styles.priceErrorText}>
+                {priceError}
+              </Text>
+            </View>
+          )}
+
+          {/* HU23: botón para validar y aplicar el rango */}
+          <GradientButton
+            label="Aplicar filtros"
+            onPress={applyPriceFilters}
+            style={styles.applyFiltersButton}
+            textStyle={styles.applyFiltersText}
+          />
 
           <Text style={styles.filterLabel}>Ordenar por precio</Text>
 
@@ -434,6 +516,7 @@ export default function HomeScreen({ navigate, onlyFavorites = false }) {
                 size={17}
                 color={colors.orange}
               />
+
               <Text style={styles.clearText}>Limpiar filtros</Text>
             </TouchableOpacity>
           )}
@@ -463,6 +546,7 @@ export default function HomeScreen({ navigate, onlyFavorites = false }) {
             size={19}
             color={colors.orange}
           />
+
           <Text style={styles.comparisonInfoText}>
             Selecciona entre 2 y 3 productos para compararlos.
           </Text>
@@ -606,6 +690,7 @@ export default function HomeScreen({ navigate, onlyFavorites = false }) {
                   size={16}
                   color={colors.orange}
                 />
+
                 <Text style={styles.clearComparisonText}>Limpiar</Text>
               </TouchableOpacity>
 
@@ -885,6 +970,35 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
     fontSize: 13,
     color: '#000',
+  },
+
+  // HU23: ERROR DE VALIDACIÓN
+  priceErrorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 9,
+    padding: 9,
+    backgroundColor: '#FDECEC',
+    borderRadius: 8,
+    gap: 6,
+  },
+
+  priceErrorText: {
+    flex: 1,
+    fontFamily: fonts.medium,
+    fontSize: 12,
+    color: '#D32F2F',
+  },
+
+  // HU23: BOTÓN APLICAR FILTROS
+  applyFiltersButton: {
+    marginTop: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+
+  applyFiltersText: {
+    fontSize: 13,
   },
 
   sortRow: {
